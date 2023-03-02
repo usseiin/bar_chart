@@ -1,5 +1,4 @@
 import 'dart:math';
-import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
@@ -9,6 +8,7 @@ class BarChart extends CustomPainter {
   List<double>? values;
   double? bottomSpace;
   double? barSpaceRatio;
+  double? maxValue;
 
   BarChart({
     this.backgroundColor = Colors.transparent,
@@ -16,6 +16,7 @@ class BarChart extends CustomPainter {
     this.values = list,
     this.bottomSpace = .05,
     this.barSpaceRatio = .75,
+    this.maxValue,
   });
 
   @override
@@ -29,23 +30,31 @@ class BarChart extends CustomPainter {
     var spaceBetweenBar = mainSpaceRatio.percentLeft()! * barSpaceWidth;
     var barMidPoint = spaceBetweenBar + (0.5 * barWidth);
     var interval = 3;
-    var maxValue = values!.reduce(max);
-    double interval_ = maxValue / interval;
+    var maxVal = maxValue ?? values!.reduce(max);
+    double interval_ = maxVal / (interval - 1);
 
-    final textStyle = ui.TextStyle(
-      color: Colors.black,
-      fontSize: 12,
-    );
-    final paragraphStyle = ui.ParagraphStyle(
-      textAlign: TextAlign.left,
-    );
-    final paragraphBuilder = ui.ParagraphBuilder(paragraphStyle)
-      ..pushStyle(textStyle);
+    final nav = <int>[];
+
+    for (var i = 0; i < interval; i++) {
+      nav.add((i * interval_).round());
+    }
+
+    void drawText(String txt, x, y) {
+      final span = TextSpan(
+          text: txt, style: const TextStyle(color: Colors.black, fontSize: 12));
+      final textPaintr =
+          TextPainter(text: span, textDirection: TextDirection.ltr);
+      textPaintr.layout(minWidth: 0, maxWidth: double.maxFinite);
+
+      canvas.save();
+      textPaintr.paint(canvas, Offset(x, y));
+      canvas.restore();
+    }
 
     double barHeight(double val) {
       return height -
           bottomSpace! * height -
-          (bottomSpace.percentLeft()! * height * ((val) / maxValue));
+          (bottomSpace.percentLeft()! * height * ((val) / maxVal));
     }
 
     var paint = Paint()
@@ -79,14 +88,9 @@ class BarChart extends CustomPainter {
             Offset(mainSpaceRatio! * width, height)),
         bottomPaint);
 
-    for (var i = 0; i <= interval; i++) {
-      final val = i * interval_;
-      print(val);
-      paragraphBuilder.addText((val).round().toString().padLeft(4));
-      final paragraph = paragraphBuilder.build()
-        ..layout(ui.ParagraphConstraints(width: width));
-      canvas.drawParagraph(
-          paragraph, Offset(width * mainSpaceRatio!, barHeight(val) - 8));
+    for (var element in nav) {
+      drawText(element.toString().padLeft(4), width * mainSpaceRatio!,
+          barHeight(element.toDouble()) - height * bottomSpace!);
     }
   }
 
